@@ -92,4 +92,8 @@ export const orderService = {
 export const userService = {
   getAll: () =>
     api.get<User[]>('/users').then(r => r.data),
+  updateRole: (id: number, role: string) =>
+    api.patch(`/users/${id}/role`, { role }).then(r => r.data),
+  delete: (id: number) =>
+    api.delete(`/users/${id}`).then(r => r.data),
 };

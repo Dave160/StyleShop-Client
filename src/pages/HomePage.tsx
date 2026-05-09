@@ -53,7 +53,7 @@ export default function HomePage() {
         <div className="relative z-10 max-w-screen-2xl mx-auto px-6 lg:px-16 w-full">
           <motion.div initial="hidden" animate="visible" variants={fadeUp}>
             <span className="inline-block text-indigo-400 font-semibold text-sm tracking-[0.3em] uppercase mb-6 border border-indigo-500/30 px-4 py-2 rounded-full backdrop-blur-sm bg-indigo-500/10">
-              Новая коллекция 2025
+              Новая коллекция 2026
             </span>
           </motion.div>
 
@@ -221,7 +221,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-800/50 py-10">
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-16 text-center text-slate-500 text-sm">
-          © 2025 StyleShop · Интернет-магазин одежды · VKR — Канга Д.Ж.
+          © 2026 StyleShop · Интернет-магазин одежды
         </div>
       </footer>
     </div>

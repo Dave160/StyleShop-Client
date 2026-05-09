@@ -23,7 +23,7 @@ export const useFavoritesStore = create<FavoritesState>()(
             : [...state.items, product],
         }));
       },
-      isFavorite: (productId) => get().items.some(p => p.id === productId),
+      isFavorite: (productId: number) => get().items.some(p => p.id === productId),
     }),
     { name: 'favorites-storage' }
   )

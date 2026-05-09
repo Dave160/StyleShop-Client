@@ -1,33 +1,30 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, ShoppingBag, ArrowRight, Minus, Plus } from 'lucide-react';
-import { useCartStore } from '../store/stores';
-import { useAuthStore } from '../store/stores';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useCartStore, useAuthStore } from '../store/stores';
 import { orderService } from '../services/services';
 import toast from 'react-hot-toast';
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, clearCart, totalPrice } = useCartStore();
+  const { items, removeItem, updateQuantity, clearCart } = useCartStore();
   const { isAuthenticated } = useAuthStore();
-  const [shippingAddress, setShippingAddress] = useState('');
+  const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const total = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
+  const totalCount = items.reduce((s, i) => s + i.quantity, 0);
+  const shipping = total >= 5000 ? 0 : 350;
+
   const handleOrder = async () => {
-    if (!isAuthenticated) {
-      toast.error('Пожалуйста, войдите чтобы оформить заказ.');
-      navigate('/login');
-      return;
-    }
-    if (!shippingAddress.trim()) {
-      toast.error('Пожалуйста, укажите адрес доставки.');
-      return;
-    }
+    if (!isAuthenticated) { navigate('/login'); return; }
+    if (!address.trim()) { toast.error('Укажите адрес доставки'); return; }
     setLoading(true);
     try {
       await orderService.create({
-        shippingAddress,
+        shippingAddress: address,
         notes,
         items: items.map(i => ({
           productId: i.product.id,
@@ -37,164 +34,152 @@ export default function CartPage() {
         })),
       });
       clearCart();
-      toast.success('Заказ успешно оформлен!');
+      toast.success('Заказ оформлен!');
       navigate('/orders');
     } catch {
-      toast.error('Ошибка при оформлении заказа. Попробуйте ещё раз.');
+      toast.error('Ошибка при оформлении заказа');
     } finally {
       setLoading(false);
     }
   };
 
-  if (items.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ShoppingBag size={64} className="text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-700 mb-2">Ваша корзина пуста</h2>
-          <p className="text-gray-400 mb-6">Откройте наши товары и добавьте их в корзину.</p>
-          <Link
-            to="/products"
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
-          >
-            Смотреть каталог <ArrowRight size={18} />
-          </Link>
+  if (items.length === 0) return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="flex-1 pt-24 flex flex-col items-center justify-center gap-6">
+        <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center">
+          <ShoppingBag size={40} className="text-slate-300" />
         </div>
+        <h2 className="text-2xl font-black text-slate-700">Корзина пуста</h2>
+        <p className="text-slate-400">Добавьте товары из каталога</p>
+        <Link to="/products" className="px-8 py-3 bg-indigo-500 text-white font-semibold rounded-xl hover:bg-violet-500 transition-colors">
+          Перейти в каталог
+        </Link>
       </div>
-    );
-  }
+      <footer className="bg-slate-950 border-t border-slate-800/50 py-10">
+        <div className="max-w-screen-2xl mx-auto px-6 lg:px-16 text-center text-slate-500 text-sm">© 2026 StyleShop · Интернет-магазин одежды</div>
+      </footer>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-8">Моя корзина ({items.length} товар{items.length > 1 ? 'а' : ''})</h1>
+    <div className="min-h-screen bg-slate-50 pt-20">
+      <div className="max-w-screen-2xl mx-auto px-6 lg:px-16 py-10">
+        <div className="mb-10">
+          <p className="text-indigo-500 font-semibold text-sm tracking-[0.3em] uppercase mb-1">StyleShop</p>
+          <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tight">Корзина</h1>
+          <p className="text-slate-500 mt-1 text-sm">{totalCount} товара</p>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart items */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map(item => (
-              <div
-                key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}`}
-                className="bg-white rounded-2xl shadow-sm p-4 flex gap-4 items-center"
-              >
-                <img
-                  src={item.product.imageUrl || 'https://placehold.co/100x100?text=...'}
-                  alt={item.product.name}
-                  className="w-20 h-20 object-cover rounded-xl shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=...'; }}
-                />
-
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800 text-sm truncate">{item.product.name}</h3>
-                  <div className="flex gap-2 mt-1">
-                    {item.selectedSize && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                        {item.selectedSize}
-                      </span>
-                    )}
-                    {item.selectedColor && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                        {item.selectedColor}
-                      </span>
-                    )}
+            <AnimatePresence>
+              {items.map(item => (
+                <motion.div
+                  key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}`}
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20, height: 0 }}
+                  className="bg-white rounded-2xl border border-slate-100 p-4 flex gap-4 shadow-sm"
+                >
+                  <Link to={`/products/${item.product.id}`} className="shrink-0">
+                    <img src={item.product.imageUrl} alt={item.product.name} className="w-24 h-28 object-cover rounded-xl"
+                      onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/96x112?text=...'; }} />
+                  </Link>
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <Link to={`/products/${item.product.id}`} className="font-bold text-slate-900 hover:text-indigo-600 transition-colors">
+                          {item.product.name}
+                        </Link>
+                        <div className="flex gap-2 mt-1">
+                          {item.selectedSize && <span className="text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">{item.selectedSize}</span>}
+                          {item.selectedColor && <span className="text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">{item.selectedColor}</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => removeItem(item.product.id)}
+                        title="Удалить товар"
+                        className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                        <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          title="Уменьшить количество"
+                          className="w-9 h-9 flex items-center justify-center text-slate-500 hover:bg-white transition-colors">
+                          <Minus size={14} />
+                        </button>
+                        <span className="w-9 h-9 flex items-center justify-center font-bold text-sm text-slate-900">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          title="Увеличить количество"
+                          className="w-9 h-9 flex items-center justify-center text-slate-500 hover:bg-white transition-colors">
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      <span className="font-black text-slate-900 text-lg">{(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽</span>
+                    </div>
                   </div>
-                  <p className="text-emerald-700 font-bold mt-1">{item.product.price.toFixed(2)} ₽</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                    title="Уменьшить количество"
-                    className="w-7 h-7 border border-gray-200 rounded-lg flex items-center justify-center hover:border-emerald-400 transition-colors"
-                  >
-                    <Minus size={12} />
-                  </button>
-                  <span className="w-8 text-center font-semibold text-sm">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                    title="Увеличить количество"
-                    className="w-7 h-7 border border-gray-200 rounded-lg flex items-center justify-center hover:border-emerald-400 transition-colors"
-                  >
-                    <Plus size={12} />
-                  </button>
-                </div>
-
-                <div className="text-right min-w-[60px]">
-                  <p className="font-bold text-gray-800 text-sm">
-                    {(item.product.price * item.quantity).toFixed(2)} ₽
-                  </p>
-                  <button
-                    onClick={() => removeItem(item.product.id)}
-                    title="Удалить товар"
-                    className="text-red-400 hover:text-red-600 mt-1 transition-colors"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-            ))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
-          {/* Order summary */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 h-fit sticky top-24">
-            <h2 className="font-bold text-gray-800 text-lg mb-5">Итог заказа</h2>
-
-            <div className="space-y-2 mb-5">
-              {items.map(item => (
-                <div key={item.product.id} className="flex justify-between text-sm text-gray-500">
-                  <span className="truncate max-w-[140px]">{item.product.name} × {item.quantity}</span>
-                  <span>{(item.product.price * item.quantity).toFixed(2)} ₽</span>
+          {/* Summary */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-6">
+              <h2 className="font-black text-slate-900 text-xl uppercase tracking-tight">Итого</h2>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between text-slate-600">
+                  <span>Товары ({totalCount} шт.)</span>
+                  <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
-              ))}
-            </div>
-
-            <div className="border-t pt-4 mb-5">
-              <div className="flex justify-between font-bold text-gray-800 text-lg">
-                <span>Итого</span>
-                <span className="text-emerald-700">{totalPrice().toFixed(2)} ₽</span>
+                <div className="flex justify-between text-slate-600">
+                  <span>Доставка</span>
+                  <span className={shipping === 0 ? 'text-emerald-600 font-semibold' : ''}>{shipping === 0 ? 'Бесплатно' : `${shipping} ₽`}</span>
+                </div>
+                {total < 5000 && <p className="text-xs text-slate-400">Добавьте ещё {(5000 - total).toLocaleString('ru-RU')} ₽ для бесплатной доставки</p>}
+                <div className="pt-3 border-t border-slate-100 flex justify-between font-black text-xl text-slate-900">
+                  <span>К оплате</span>
+                  <span>{(total + shipping).toLocaleString('ru-RU')} ₽</span>
+                </div>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Бесплатная доставка от 5000 ₽</p>
-            </div>
 
-            <div className="space-y-3 mb-5">
-              <div>
-                <label htmlFor="shipping-address" className="block text-sm font-medium text-gray-700 mb-1">
-                  Адрес доставки *
-                </label>
-                <textarea
-                  id="shipping-address"
-                  value={shippingAddress}
-                  onChange={e => setShippingAddress(e.target.value)}
-                  placeholder="ул. Пушкина, д. 1, Москва, 101000"
-                  rows={2}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 resize-none"
-                />
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <MapPin size={12} /> Адрес доставки *
+                  </label>
+                  <textarea value={address} onChange={e => setAddress(e.target.value)} rows={3}
+                    placeholder="г. Москва, ул. Арбат, д. 1, кв. 10"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Примечания</label>
+                  <input value={notes} onChange={e => setNotes(e.target.value)}
+                    placeholder="Позвоните перед доставкой..."
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+                </div>
               </div>
-              <div>
-                <label htmlFor="order-notes" className="block text-sm font-medium text-gray-700 mb-1">Примечания (необязательно)</label>
-                <textarea
-                  id="order-notes"
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Особые инструкции..."
-                  rows={2}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 resize-none"
-                />
-              </div>
-            </div>
 
-            <button
-              onClick={handleOrder}
-              disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              {loading ? 'Оформление заказа...' : (
-                <><ArrowRight size={18} /> Оформить заказ</>
+              <button onClick={handleOrder} disabled={!address.trim() || loading}
+                className="w-full h-14 bg-indigo-500 hover:bg-violet-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20 text-lg">
+                {loading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><ArrowRight size={20} /> Оформить заказ</>}
+              </button>
+
+              {!isAuthenticated && (
+                <p className="text-center text-xs text-slate-400">
+                  <Link to="/login" className="text-indigo-500 hover:underline">Войдите</Link>, чтобы оформить заказ
+                </p>
               )}
-            </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <footer className="bg-slate-950 border-t border-slate-800/50 py-10 mt-10">
+        <div className="max-w-screen-2xl mx-auto px-6 lg:px-16 text-center text-slate-500 text-sm">
+          © 2026 StyleShop · Интернет-магазин одежды
+        </div>
+      </footer>
     </div>
   );
 }

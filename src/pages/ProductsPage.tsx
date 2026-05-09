@@ -1,167 +1,170 @@
-﻿import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { productService, categoryService } from '../services/services';
 import ProductCard from '../shared/components/ProductCard';
 import type { ProductFilter } from '../types';
 
 export default function ProductsPage() {
-  const [searchParams] = useSearchParams();
-  const [filter, setFilter] = useState<ProductFilter>({
-    categoryId: searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : undefined,
-    gender: searchParams.get('gender') || undefined,
-    search: '',
-  });
-  const [showFilters, setShowFilters] = useState(false);
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
 
-  const { data: products, isLoading } = useQuery({
+  const [search, setSearch] = useState('');
+  const [gender, setGender] = useState(params.get('gender') || '');
+  const [categoryId, setCategoryId] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const g = new URLSearchParams(location.search).get('gender');
+    if (g) setGender(g);
+  }, [location.search]);
+
+  const filter: ProductFilter = {
+    search: search || undefined,
+    gender: gender || undefined,
+    categoryId: categoryId ? Number(categoryId) : undefined,
+    minPrice: minPrice ? Number(minPrice) : undefined,
+    maxPrice: maxPrice ? Number(maxPrice) : undefined,
+  };
+
+  const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', filter],
     queryFn: () => productService.getAll(filter),
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: categoryService.getAll,
   });
 
-  const resetFilters = () => setFilter({ search: '' });
+  const clearFilters = () => { setSearch(''); setGender(''); setCategoryId(''); setMinPrice(''); setMaxPrice(''); };
+  const hasFilters = !!(search || gender || categoryId || minPrice || maxPrice);
+
+  const FilterSidebar = () => (
+    <div className="space-y-8">
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Поиск</label>
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Название товара..."
+            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Пол</label>
+        <div className="flex flex-col gap-2">
+          {[{ v: '', l: 'Все' }, { v: 'men', l: 'Мужское' }, { v: 'women', l: 'Женское' }].map(({ v, l }) => (
+            <button key={v} onClick={() => setGender(v)}
+              className={`text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${gender === v ? 'bg-indigo-500 text-white' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Категория</label>
+        <div className="flex flex-col gap-2">
+          <button onClick={() => setCategoryId('')}
+            className={`text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${!categoryId ? 'bg-indigo-500 text-white' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'}`}>
+            Все категории
+          </button>
+          {categories.map(c => (
+            <button key={c.id} onClick={() => setCategoryId(String(c.id))}
+              className={`text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${categoryId === String(c.id) ? 'bg-indigo-500 text-white' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'}`}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Цена (₽)</label>
+        <div className="flex gap-3">
+          <input value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="От" type="number"
+            className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+          <input value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="До" type="number"
+            className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+      </div>
+      {hasFilters && (
+        <button onClick={clearFilters}
+          className="w-full py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+          <X size={14} /> Сбросить фильтры
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+    <div className="min-h-screen bg-slate-50 pt-20">
+      <div className="max-w-screen-2xl mx-auto px-6 lg:px-16 py-10">
+        <div className="flex items-center justify-between mb-10">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Каталог</h1>
-            <p className="text-gray-500 mt-1">{products?.length ?? 0} товаров найдено</p>
+            <p className="text-indigo-500 font-semibold text-sm tracking-[0.3em] uppercase mb-1">StyleShop</p>
+            <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tight">Каталог</h1>
+            <p className="text-slate-500 mt-1 text-sm">{products.length} товаров найдено</p>
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
-          >
-            <SlidersHorizontal size={16} />
-            Фильтры
+          <button onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-indigo-500 text-white rounded-xl font-semibold text-sm">
+            <SlidersHorizontal size={16} /> Фильтры
           </button>
         </div>
 
-        <div className="flex gap-8">
-
-          {/* Sidebar Filters */}
-          <aside className={`${showFilters ? 'block' : 'hidden'} md:block w-64 shrink-0`}>
-            <div className="bg-white rounded-2xl shadow-sm p-6 space-y-6 sticky top-24">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-gray-800">Фильтры</h3>
-                <button onClick={resetFilters} className="text-xs text-emerald-600 hover:underline flex items-center gap-1">
-                  <X size={12} /> Сбросить
-                </button>
-              </div>
-
-              {/* Search */}
-              <div>
-                <label htmlFor="filter-search" className="text-sm font-medium text-gray-700 block mb-2">Поиск</label>
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="filter-search"
-                    type="text"
-                    placeholder="Название товара..."
-                    value={filter.search || ''}
-                    onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                  />
-                </div>
-              </div>
-
-              {/* Пол */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Пол</label>
-                <div className="space-y-2">
-                  {[
-                    { value: '', label: 'Все' },
-                    { value: 'men', label: 'Мужчины' },
-                    { value: 'women', label: 'Женщины' },
-                    { value: 'kids', label: 'Дети' },
-                  ].map(g => (
-                    <label key={g.value} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="gender"
-                        value={g.value}
-                        checked={(filter.gender ?? '') === g.value}
-                        onChange={() => setFilter(f => ({ ...f, gender: g.value || undefined }))}
-                        className="text-emerald-600"
-                      />
-                      <span className="text-sm text-gray-600">{g.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Категория */}
-              <div>
-                <label htmlFor="filter-category" className="text-sm font-medium text-gray-700 block mb-2">Категория</label>
-                <select
-                  id="filter-category"
-                  value={filter.categoryId ?? ''}
-                  onChange={e => setFilter(f => ({ ...f, categoryId: e.target.value ? Number(e.target.value) : undefined }))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                >
-                  <option value="">Все</option>
-                  {(categories ?? []).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Цена */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Цена (₽)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Мин"
-                    title="Минимальная цена"
-                    value={filter.minPrice ?? ''}
-                    onChange={e => setFilter(f => ({ ...f, minPrice: e.target.value ? Number(e.target.value) : undefined }))}
-                    className="w-1/2 border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Макс"
-                    title="Максимальная цена"
-                    value={filter.maxPrice ?? ''}
-                    onChange={e => setFilter(f => ({ ...f, maxPrice: e.target.value ? Number(e.target.value) : undefined }))}
-                    className="w-1/2 border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                  />
-                </div>
-              </div>
+        <div className="flex gap-10">
+          <aside className="hidden lg:block w-72 shrink-0">
+            <div className="sticky top-24 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+              <h2 className="font-black text-slate-900 text-lg uppercase tracking-tight mb-6">Фильтры</h2>
+              <FilterSidebar />
             </div>
           </aside>
 
-          {/* Product Grid */}
-          <div className="flex-1">
-            {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl h-80 animate-pulse" />
-                ))}
-              </div>
-            ) : products?.length === 0 ? (
-              <div className="text-center py-20 text-gray-400">
-                <p className="text-5xl mb-4">🔍</p>
-                <p className="text-lg font-medium">Товары не найдены</p>
-                <p className="text-sm mt-2">Попробуйте другие фильтры</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(products ?? []).map(p => <ProductCard key={p.id} product={p} />)}
-              </div>
+          <AnimatePresence>
+            {sidebarOpen && (
+              <motion.div initial={{ opacity: 0, x: -300 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -300 }}
+                className="fixed inset-0 z-50 lg:hidden">
+                <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+                <div className="absolute left-0 top-0 bottom-0 w-80 bg-white p-6 overflow-y-auto shadow-2xl">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="font-black text-slate-900 text-lg uppercase">Фильтры</h2>
+                    <button onClick={() => setSidebarOpen(false)} title="Закрыть фильтры"><X size={20} className="text-slate-500" /></button>
+                  </div>
+                  <FilterSidebar />
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
+
+          <main className="flex-1">
+            {isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
+                {Array.from({ length: 6 }).map((_, i) => <div key={i} className="bg-white rounded-2xl aspect-[3/4] animate-pulse" />)}
+              </div>
+            ) : products.length > 0 ? (
+              <motion.div layout className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
+                {products.map((p, i) => <ProductCard key={p.id} product={p} index={i} stagger />)}
+              </motion.div>
+            ) : (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-32 text-center">
+                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                  <Search size={32} className="text-slate-400" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-700 mb-2">Товары не найдены</h3>
+                <p className="text-slate-400 mb-6">Попробуйте изменить параметры поиска</p>
+                <button onClick={clearFilters} className="px-6 py-2.5 bg-indigo-500 text-white rounded-xl font-semibold">Сбросить фильтры</button>
+              </motion.div>
+            )}
+          </main>
         </div>
       </div>
+
+      <footer className="bg-slate-950 border-t border-slate-800/50 py-10 mt-10">
+        <div className="max-w-screen-2xl mx-auto px-6 lg:px-16 text-center text-slate-500 text-sm">
+          © 2026 StyleShop · Интернет-магазин одежды
+        </div>
+      </footer>
     </div>
   );
 }

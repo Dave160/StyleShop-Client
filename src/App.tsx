@@ -31,9 +31,6 @@ function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <main>{children}</main>
-      <footer className="bg-white border-t mt-16 py-8 text-center text-sm text-gray-400">
-        © 2025 StyleShop · Интернет-магазин одежды
-      </footer>
     </div>
   );
 }

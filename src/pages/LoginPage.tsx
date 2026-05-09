@@ -1,6 +1,7 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shirt, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { authService } from '../services/services';
 import { useAuthStore } from '../store/stores';
 import toast from 'react-hot-toast';
@@ -28,76 +29,81 @@ export default function LoginPage() {
     }
   };
 
+  const inputCls = "w-full px-4 py-3.5 bg-white/5 border border-slate-700 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-emerald-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-100 rounded-2xl mb-4">
-            <Shirt size={28} className="text-emerald-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800">Вход</h1>
-          <p className="text-gray-500 text-sm mt-1">Войдите в свой аккаунт StyleShop</p>
+    <div className="min-h-screen bg-slate-950 flex">
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        <img src="src/assets/etallage-dans-une-boutique-de-vetement.jpg" alt="fashion" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 to-transparent" />
+        <div className="absolute bottom-16 left-12">
+          <h2 className="text-white font-black text-5xl uppercase leading-tight mb-4">ДОБРО<br />ПОЖАЛОВАТЬ</h2>
+          <p className="text-slate-400 text-lg">Войдите в StyleShop</p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              id="login-email"
-              type="email"
-              required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="вы@пример.com"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
-            <div className="relative">
-              <input
-                id="login-password"
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(s => !s)}
-                title={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
+          className="w-full max-w-md">
+          <div className="lg:hidden flex items-center gap-3 mb-10">
+            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-black">S</span>
             </div>
+            <span className="text-white font-black text-xl tracking-widest">StyleShop</span>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors"
-          >
-            {loading ? 'Вход...' : 'Войти'}
-          </button>
-        </form>
+          <h1 className="text-white font-black text-4xl uppercase tracking-tight mb-2">Вход</h1>
+          <p className="text-slate-400 mb-10">Войдите в свой аккаунт</p>
 
-        {/* Demo credentials */}
-        <div className="mt-4 p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700">
-          <p className="font-semibold mb-1">Аккаунт администратора (демо):</p>
-          <p>Email: admin@clothingstore.com</p>
-          <p>Пароль: Admin@123</p>
-        </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Пароль</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={`${inputCls} pr-12`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(s => !s)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Ещё нет аккаунта?{' '}
-          <Link to="/register" className="text-emerald-600 hover:underline font-medium">
-            Зарегистрироваться
-          </Link>
-        </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 bg-indigo-500 hover:bg-violet-500 disabled:opacity-60 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/30 mt-2"
+            >
+              {loading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn size={20} /> Войти</>}
+            </button>
+          </form>
+
+          <p className="text-center text-slate-500 mt-8 text-sm">
+            Ещё нет аккаунта?{' '}
+            <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+              Зарегистрироваться
+            </Link>
+          </p>
+        </motion.div>
       </div>
     </div>
   );
